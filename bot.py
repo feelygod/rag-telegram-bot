@@ -15,7 +15,8 @@ from telegram.ext import (
 from telegram.request import HTTPXRequest
 
 from rag import RAGEngine
-from config import BOT_TOKEN, OPENAI_API_KEY, SYSTEM_PROMPT, RAG_TEMPLATE, LLM_MODEL, OPENAI_BASE_URL
+from config import get_bot_token, get_openai_key, get_openai_base_url
+from config import SYSTEM_PROMPT, RAG_TEMPLATE, LLM_MODEL
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -24,10 +25,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 rag = RAGEngine()
-openai_client = None
-if OPENAI_API_KEY:
-    from openai import OpenAI
-    openai_client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
+_openai_client = None
+
+def _get_openai_client():
+    global _openai_client
+    if _openai_client is None:
+        key = get_openai_key()
+        if key:
+            from openai import OpenAI
+            _openai_client = OpenAI(api_key=key, base_url=get_openai_base_url())
+    return _openai_client
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -117,9 +124,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for r in results
     )
 
-    if openai_client:
+    if _get_openai_client():
         try:
-            response = openai_client.chat.completions.create(
+            response = _get_openai_client().chat.completions.create(
                 model=LLM_MODEL,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
@@ -153,7 +160,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def _build_app():
-    builder = Application.builder().token(BOT_TOKEN)
+    token = get_bot_token()
+    builder = Application.builder().token(token)
     proxy = os.getenv("TG_PROXY", "")
     if proxy:
         request = HTTPXRequest(proxy_url=proxy)
@@ -162,7 +170,8 @@ def _build_app():
 
 
 def main():
-    if not BOT_TOKEN:
+    token = get_bot_token()
+    if not token:
         logger.error("TG_BOT_TOKEN не задан! Укажи токен в .env или переменной окружения")
         return
 
