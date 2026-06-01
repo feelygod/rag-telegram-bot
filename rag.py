@@ -67,13 +67,12 @@ class RAGEngine:
             top_idx = np.argsort(scores)[::-1][:k]
             results = []
             for i in top_idx:
-                if scores[i] > 0:
-                    results.append({
-                        "id": self._docs[i]["id"],
-                        "text": self._docs[i]["text"],
-                        "score": float(scores[i]),
-                        "metadata": self._docs[i]["metadata"],
-                    })
+                results.append({
+                    "id": self._docs[i]["id"],
+                    "text": self._docs[i]["text"],
+                    "score": float(scores[i]),
+                    "metadata": self._docs[i]["metadata"],
+                })
             return results
         except ValueError:
             return []
